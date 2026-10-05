@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Секретная комната</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .room {
+            background: linear-gradient(to bottom, #f5f5f5 0%, #e8e8e8 100%);
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            height: 500px;
+            position: relative;
+            overflow: hidden;
+            cursor: default;
+        }
+
+        /* Пол комнаты */
+        .floor {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 150px;
+            background: repeating-linear-gradient(
+                90deg,
+                #d4a574 0px,
+                #d4a574 50px,
+                #c4956a 50px,
+                #c4956a 100px
+            );
+        }
+
+        /* Стены */
+        .wall-left {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 150px;
+            width: 100px;
+            background: linear-gradient(to right, #b8b8b8, #d0d0d0);
+        }
+
+        .wall-right {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 150px;
+            width: 100px;
+            background: linear-gradient(to left, #b8b8b8, #d0d0d0);
+        }
+
+        .wall-back {
+            position: absolute;
+            left: 100px;
+            right: 100px;
+            top: 0;
+            bottom: 150px;
+            background: linear-gradient(to bottom, #e0e0e0, #f0f0f0);
+        }
+
+        /* Дверь */
+        .door {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 150px;
+            width: 120px;
+            height: 200px;
+            background: linear-gradient(to bottom, #8B4513, #A0522D);
+            border: 4px solid #654321;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .door:hover {
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .door.open {
+            background: linear-gradient(to bottom, #2c1810, #3d2418);
+            border-color: #1a0f08;
+        }
+
+        .door-handle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 15px;
+            height: 15px;
+            background: gold;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Ключ */
+        .key {
+            position: absolute;
+            bottom: 180px;
+            left: 150px;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 20;
+        }
+
+        .key:hover {
+            transform: scale(1.2) rotate(15deg);
+            filter: drop-shadow(0 5px 15px rgba(255, 215, 0, 0.6));
+        }
+
+        .key.found {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0);
+        }
+
+        .key svg {
+            width: 100%;
+            height: 100%;
+            fill: gold;
+            filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.3));
+        }
+
+        /* Секретный объект */
+        .secret {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 160px;
+            width: 80px;
+            height: 80px;
+            opacity: 0;
+            transition: all 0.5s ease;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .secret.visible {
+            opacity: 1;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+            }
+            50% {
+                filter: drop-shadow(0 0 25px rgba(255, 215, 0, 1));
+            }
+        }
+
+        .secret svg {
+            width: 100%;
+            height: 100%;
+            fill: #FFD700;
+        }
+
+        /* Сообщение */
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: white;
+            padding: 30px 50px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .message.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* Инструкция */
+        .instructions {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: center;
+            color: #666;
+        }
+
+        .status {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .status-item {
+            padding: 10px 20px;
+            background: #e9ecef;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .status-item.active {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-item.inactive {
+            background: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🔐 Секретная комната</h1>
+        
+        <div class="room">
+            <!-- Стены -->
+            <div class="wall-left"></div>
+            <div class="wall-right"></div>
+            <div class="wall-back"></div>
+            
+            <!-- Пол -->
+            <div class="floor"></div>
+            
+            <!-- Дверь -->
+            <div class="door" id="door">
+                <div class="door-handle"></div>
+            </div>
+            
+            <!-- Ключ -->
+            <div class="key" id="key">
+                <svg viewBox="0 0 24 24">
+                    <path d="M7 14c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm9.71 2.29l-2-2c-.39-.39-1.02-.39-1.41 0L11 10.59V9c0-.55-.45-1-1-1H8c-.55 0-1 .45-1 1v2c0 .55.45 1 1 1h2v1.59l-2.29 2.29c-.39.39-.39 1.02 0 1.41l2 2c.39.39 1.02.39 1.41 0L13.41 17H15v2c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-2c0-.55-.45-1-1-1h-1.59l2.29-2.29c.39-.39.39-1.02 0-1.41z"/>
+                </svg>
+            </div>
+            
+            <!-- Секретный объект -->
+            <div class="secret" id="secret">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <p><strong>Задание:</strong> Найди ключ, открой дверь и узнай, что скрывается за ней!</p>
+            <div class="status">
+                <div class="status-item inactive" id="status-key">Ключ: не найден</div>
+                <div class="status-item inactive" id="status-door">Дверь: закрыта</div>
+                <div class="status-item inactive" id="status-secret">Секрет: скрыт</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Сообщение -->
+    <div class="message" id="message"></div>
+
+    <script>
+        // Состояния игры
+        let keyFound = false;
+        let doorOpen = false;
+        let secretVisible = false;
+
+        // Элементы DOM
+        const keyElement = document.getElementById('key');
+        const doorElement = document.getElementById('door');
+        const secretElement = document.getElementById('secret');
+        const messageElement = document.getElementById('message');
+        const statusKey = document.getElementById('status-key');
+        const statusDoor = document.getElementById('status-door');
+        const statusSecret = document.getElementById('status-secret');
+
+        // Показать сообщение
+        function showMessage(text) {
+            messageElement.textContent = text;
+            messageElement.classList.add('show');
+            setTimeout(() => {
+                messageElement.classList.remove('show');
+            }, 2000);
+        }
+
+        // Обновить статусы
+        function updateStatus() {
+            // Ключ
+            if (keyFound) {
+                statusKey.textContent = 'Ключ: найден ✓';
+                statusKey.classList.remove('inactive');
+                statusKey.classList.add('active');
+            } else {
+                statusKey.textContent = 'Ключ: не найден';
+                statusKey.classList.remove('active');
+                statusKey.classList.add('inactive');
+            }
+
+            // Дверь
+            if (doorOpen) {
+                statusDoor.textContent = 'Дверь: открыта ✓';
+                statusDoor.classList.remove('inactive');
+                statusDoor.classList.add('active');
+            } else {
+                statusDoor.textContent = 'Дверь: закрыта';
+                statusDoor.classList.remove('active');
+                statusDoor.classList.add('inactive');
+            }
+
+            // Секрет
+            if (secretVisible) {
+                statusSecret.textContent = 'Секрет: обнаружен! 🎉';
+                statusSecret.classList.remove('inactive');
+                statusSecret.classList.add('active');
+            } else {
+                statusSecret.textContent = 'Секрет: скрыт';
+                statusSecret.classList.remove('active');
+                statusSecret.classList.add('inactive');
+            }
+        }
+
+        // Обработчик клика по ключу
+        keyElement.addEventListener('click', function() {
+            if (!keyFound) {
+                keyFound = true;
+                keyElement.classList.add('found');
+                updateStatus();
+            }
+        });
+
+        // Обработчик клика по двери
+        doorElement.addEventListener('click', function() {
+            if (!keyFound) {
+                showMessage('Сначала найди ключ');
+            } else if (!doorOpen) {
+                doorOpen = true;
+                secretVisible = true;
+                doorElement.classList.add('open');
+                secretElement.classList.add('visible');
+                updateStatus();
+                showMessage('Дверь открыта! Секрет обнаружен! 🎉');
+            }
+        });
+
+        // Инициализация
+        updateStatus();
+    </script>
+</body>
+</html>
